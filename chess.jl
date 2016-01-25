@@ -1,48 +1,79 @@
 abstract Piece # apparently bad practice see enum in http://docs.julialang.org/en/release-0.4/manual/style-guide/
 
 immutable Empty <: Piece
-  side::Int
 end
 
 type Pawn <: Piece
-  hasMoved::Bool
   side::Int
+  hasMoved::Bool
 end
 
 type Knight <: Piece
   side::Int
+  hasMoved::Bool
 end
 
 type Bishop <: Piece
   side::Int
+  hasMoved::Bool
 end
 
 type Rook <: Piece
   side::Int
+  hasMoved::Bool
 end
 
 type Queen <: Piece
   side::Int
+  hasMoved::Bool
 end
 
 type King <: Piece
   side::Int
+  hasMoved::Bool
 end
 
+type Move #Describes a move as a function which operates on a board and its inverse
+  makeMove
+  unmakeMove
+end
 
-Pawn(x) = Pawn(false, x)
-Empty() = Empty(0)
+function normalMove(board_, x1, y1, x2, y2)
+  movingPiece = board_[y1, x1]
+  takenPiece = board_[y2, x2]
+  hasMoved = board_[y1, x1]
+  function f(board)
+    movingPiece.hasMoved = true
+    board[y2, x2] = movingPiece
+    board[y1, x1] = Empty()
+  end
+  function invf(board)
+    movingPiece.hasMoved = hasMoved
+    board[y1, x1] = movingPiece
+    board[y2, x2] = takenPiece
+  end
+  return Move(f, invf)
+end
 
-function chess_moves(side, board)
-  N = sqrt(length(board))
-  for (index, piece) in enumerate(board)
-    println(board)
-    x, y = indexToXY(index)
-    if piece.side == side
-      for move in moves(piece, board, x, y)
-        println(make_move(board, move))
-      end
-    end
+Pawn(x) = Pawn(x, false)
+Knight(x) = Knight(x, false)
+Bishop(x) = Bishop(x, false)
+Rook(x) = Rook(x, false)
+Queen(x) = Queen(x, false)
+King(x) = King(x, false)
+
+function isEmpty(piece::Piece)
+  return piece == Empty()
+end
+
+isWhite(piece::Piece) = !isEmpty(piece) && piece.side == 1
+isBlack(piece::Piece) = !isEmpty(piece) && piece.side == -1
+
+function sameSide(piece1, piece2)
+  if isEmpty(piece1) || isEmpty(piece2)
+    return false
+  else
+    return piece1.side == piece2.side
   end
 end
 
@@ -58,10 +89,10 @@ end
 function movesInDir(board, x, y, dir)
   dx, dy = dir
   xx, yy = x + dx, y+dy
-  while inBounds(xx, yy) && board[y, x].side != board[yy, xx].side
-    if typeof(board[yy, xx]) == Empty
+  while inBounds(xx, yy)
+    if isEmpty(board[yy, xx])
       produce(xx, yy)
-    elseif board[yy, xx].side != board[y, x].side
+    elseif !sameSide(board[yy, xx], board[y, x])
       produce(xx, yy)
       break
     else
@@ -89,7 +120,7 @@ function knightMoves(board, x, y)
 end
 
 function inBounds(x, y, N)
-  return 0 < x <= N && 0 < y <= N
+  return 1 <= x <= N && 1 <= y <= N
 end
 
 inBounds(x, y) = inBounds(x, y, 8)
@@ -100,8 +131,8 @@ function moves(piece::Knight, board, x, y)
       dx, dy = move
       xx = x + dx
       yy = y + dy
-      if inBounds(xx, yy) && piece.side != board[yy, xx].side
-        produce(xx, yy)
+      if inBounds(xx, yy) && !sameSide(piece, board[yy, xx])
+        produce((xx, yy), normalMove(board, x, y, xx, yy))
       end
     end
   end
@@ -112,16 +143,24 @@ function moves(piece, board, x, y)
 end
 
 function moves(piece::Bishop, board, x, y)
-  diagonalMoves(board, x, y)
+  for (xx, yy) in Task(()->diagonalMoves(board, x, y))
+    produce((xx, yy), normalMove(board, x, y, xx, yy))
+  end
 end
 
 function moves(piece::Rook, board, x, y)
-  cardinalMoves(board, x, y)
+  for (xx, yy) in  Task(()->cardinalMoves(board, x, y))
+    produce((xx, yy), normalMove(board, x, y, xx, yy))
+  end
 end
 
 function moves(piece::Queen, board, x, y)
-  diagonalMoves(board, x, y)
-  cardinalMoves(board, x, y)
+  for (xx, yy) in Task(()->diagonalMoves(board, x, y))
+    produce((xx, yy), normalMove(board, x, y, xx, yy))
+  end
+  for (xx, yy) in  Task(()->cardinalMoves(board, x, y))
+    produce((xx, yy), normalMove(board, x, y, xx, yy))
+  end
 end
 
 function moves(piece::King, board, x, y)
@@ -132,26 +171,31 @@ function moves(piece::King, board, x, y)
     end
     xx = x + dx
     yy = y + dy
-    if inBounds(xx, yy) && piece.side != board[yy, xx].side
-      produce(xx, yy)
+    if inBounds(xx, yy) && !sameSide(piece, board[yy, xx])
+      produce((xx, yy), normalMove(board, x, y, xx, yy))
     end
   end
+  # if !piece.hasMoved
+  #   startRow = side==1 ? 1 : 8
+  #   if !board[startRow, 1].hasMoved && all(map((x)->isEmpty(x), board[startRow, 2:x-1]))
+  #
+  #   end
+  # end
 end
 
 function moves(piece::Pawn, board, x, y)
   dy = piece.side
-  dx = 0
-  xx = x + dx
-  yy = y + dy
-  if inBounds(xx, yy) && typeof(board[yy, xx]) == Empty
-    produce(xx, yy)
-    if inBounds(xx, yy+dy) && typeof(board[yy+dy, xx]) == Empty && !piece.hasMoved
-      produce(xx, yy+dy)
+  @assert piece.side != 0
+  if inBounds(x, y+dy) && isEmpty(board[y+dy, x])
+    produce((x, y+dy), normalMove(board, x, y, x, y+dy))
+    if inBounds(x, y + 2*dy) && isEmpty(board[y + 2*dy, x]) && !piece.hasMoved
+      produce((x, y + 2*dy), normalMove(board, x, y, x, y + 2*dy))
     end
   end
+  yy = y + dy
   for dx in -1:2:1
-    if inBounds(x + dx, yy) && piece.side != board[yy, x+dx].side && typeof(board[yy, x+dx]) != Empty
-      produce(x+dx, yy)
+    if inBounds(x + dx, yy) && !sameSide(piece, board[yy, x+dx]) && !isEmpty(board[yy, x+dx])
+      produce((x+dx, yy), normalMove(board, x, y, x+dx, yy))
     end
   end
 end
@@ -184,6 +228,10 @@ function display(piece::King)
   return 'K'
 end
 
+function executeMove(board, x1, y1, x2, y2)
+
+end
+
 function makeBoard()
   ([
     Rook(1)     Knight(1)     Bishop(1)     King(1)     Queen(1)     Bishop(1)     Knight(1)     Rook(1);
@@ -210,8 +258,8 @@ function getCursesDisplay()
   ccall((:init_pair, :libncurses), Int32, (Int16, Int16, Int16), 2, 0, 11)
   ccall((:init_pair, :libncurses), Int32, (Int16, Int16, Int16), 3, 15, 3)
   ccall((:init_pair, :libncurses), Int32, (Int16, Int16, Int16), 4, 15, 11)
-  ccall((:init_pair, :libncurses), Int32, (Int16, Int16, Int16), 5, 0, 1)
-  ccall((:init_pair, :libncurses), Int32, (Int16, Int16, Int16), 6, 15, 1)
+  ccall((:init_pair, :libncurses), Int32, (Int16, Int16, Int16), 5, 15, 1)
+  ccall((:init_pair, :libncurses), Int32, (Int16, Int16, Int16), 6, 0, 1)
 
   blackOnBlack = ccall((:COLOR_PAIR, :libncurses), Int32, (Int32, ), 1)
   blackOnWhite = ccall((:COLOR_PAIR, :libncurses), Int32, (Int32, ), 2)
@@ -224,8 +272,7 @@ function getCursesDisplay()
   global KEY_MOUSE = 409#unsafe_load(cglobal((:KEY_MOUSE, :libncurses), UInt8))
   BUTTON1_PRESSED = 2#unsafe_load(cglobal((:BUTTON1_PRESSED, :libncurses), UInt32))
   BUTTON2_PRESSED = 128#unsafe_load(cglobal((:BUTTON2_PRESSED, :libncurses), UInt32))
-  # board = makeBoard()
-  # drawChessBoard(board)
+
   ccall((:mousemask, :libncurses), Int32, (UInt32, Ptr{UInt32}),
          BUTTON1_PRESSED,
          Ref(oldMask))
@@ -247,22 +294,31 @@ function getCursesDisplay()
   function drawChessBoard(board, highlight...)
     ccall((:clear, :libncurses), Int32, ())
 
-    drawSubsetWithColor(board, blackOnBlack, (b, r, c) -> (r%2) != (c%2) && b[r, c].side == -1 && !((c, r) in highlight))
+    drawSubsetWithColor(board, blackOnBlack, (b, r, c) -> (r%2) != (c%2) && isBlack(b[r, c]) && !((c, r) in highlight))
     ccall((:refresh, :libncurses), Int32, ())
 
-    drawSubsetWithColor(board, blackOnWhite, (b, r, c) -> (r%2) == (c%2) && b[r, c].side == -1 && !((c, r) in highlight))
+    drawSubsetWithColor(board, blackOnWhite, (b, r, c) -> (r%2) == (c%2) && isBlack(b[r, c]) && !((c, r) in highlight))
     ccall((:refresh, :libncurses), Int32, ())
 
-    drawSubsetWithColor(board, whiteOnBlack, (b, r, c) -> (r%2) != (c%2) &&  b[r, c].side >= 0 && !((c, r) in highlight))
+    drawSubsetWithColor(board, whiteOnBlack, (b, r, c) -> (r%2) != (c%2) &&  isWhite(b[r, c]) && !((c, r) in highlight))
     ccall((:refresh, :libncurses), Int32, ())
 
-    drawSubsetWithColor(board, whiteOnWhite, (b, r, c) -> (r%2) == (c%2) &&  b[r, c].side >= 0 && !((c, r) in highlight))
+    drawSubsetWithColor(board, whiteOnWhite, (b, r, c) -> (r%2) == (c%2) &&  isWhite(b[r, c]) && !((c, r) in highlight))
     ccall((:refresh, :libncurses), Int32, ())
 
-    drawSubsetWithColor(board, whiteOnRed, (b, r, c) -> b[r, c].side >= 0 && ((c, r) in highlight))
+    drawSubsetWithColor(board, whiteOnWhite, (b, r, c) -> (r%2) == (c%2) &&  isEmpty(b[r, c]) && !((c, r) in highlight))
     ccall((:refresh, :libncurses), Int32, ())
 
-    drawSubsetWithColor(board, blackOnRed, (b, r, c) -> b[r, c].side == -1 && ((c, r) in highlight))
+    drawSubsetWithColor(board, whiteOnBlack, (b, r, c) -> (r%2) != (c%2) &&  isEmpty(b[r, c]) && !((c, r) in highlight))
+    ccall((:refresh, :libncurses), Int32, ())
+
+    drawSubsetWithColor(board, whiteOnRed, (b, r, c) -> isWhite(b[r, c]) && ((c, r) in highlight))
+    ccall((:refresh, :libncurses), Int32, ())
+
+    drawSubsetWithColor(board, blackOnRed, (b, r, c) -> isBlack(b[r, c]) && ((c, r) in highlight))
+    ccall((:refresh, :libncurses), Int32, ())
+
+    drawSubsetWithColor(board, whiteOnRed, (b, r, c) -> isEmpty(b[r, c]) && ((c, r) in highlight))
     ccall((:refresh, :libncurses), Int32, ())
 
     ccall((:wmove, :libncurses), Int32, (Ptr{Void}, Int32, Int32,), stdscr, 20, 20)
@@ -278,13 +334,12 @@ type MEVENT
   z::Int32
   mmask_t::UInt32
 end
-
+grr = 1;
 MEVENT() = MEVENT(0, 0, 0, 0, 0)
 wakka = []
 function humanTurn(board, side)
   mevent = MEVENT()
-  selectedX, selectedY = nothing, nothing
-  validMoves = []
+  validMoves = Dict{Tuple{Int, Int}, Move}()
   while true
     ch = ccall((:getch, :libncurses), Int32, ())
     if ch == KEY_MOUSE
@@ -292,18 +347,15 @@ function humanTurn(board, side)
       if 0 <= mevent.x < 16 && 0 <= mevent.y < 8
         y = mevent.y + 1
         x = div(mevent.x, 2) + 1
-        if (x, y) in validMoves
-          board[y, x], board[selectedY, selectedX] = board[selectedY, selectedX], Empty()
+        if haskey(validMoves, (x, y))
+          validMoves[(x, y)].makeMove(board)
+          validMoves = Dict{Tuple{Int, Int}, Move}()
           drawBoard(board)
-          selectedX, selectedY, validMoves = nothing, nothing, []
-        elseif board[y, x].side == side
-          validMoves = collect(Task(()-> moves(board[y, x], board, x, y)))
-          # global wakka = validMoves
-          selectedX, selectedY = x, y
-          drawBoard(board, validMoves...)
+        elseif !isEmpty(board[y, x]) && board[y, x].side == side
+          validMoves = Dict{Tuple{Int, Int}, Move}(Task(()-> moves(board[y, x], board, x, y)))
+          drawBoard(board, keys(validMoves)...)
         else
-          # global wakka ="dumb"
-          selectedX, selectedY, validMoves = nothing, nothing, []
+          validMoves = Dict{Tuple{Int, Int}, Move}()
           drawBoard(board)
         end
       else
@@ -315,7 +367,6 @@ end
 
 game_over = false;
 drawBoard = getCursesDisplay();
-# players = [humanTurn(-1) humanTurn(1)]
 try
 # while not game_over
   global board = makeBoard();
@@ -326,31 +377,3 @@ finally
     ccall( (:keypad, :libncurses), Int32, (Ptr{Void}, Bool), stdscr, false)
     ccall((:endwin, :libncurses), Int32, ())
 end
-println(wakka)
-
-# board = [
-#   Empty() Pawn(1) Empty() Empty() Empty() Empty() Empty() Empty();
-#   Bishop(-1) Pawn(1) Knight(-1) Empty() Empty() Empty() Empty() Empty();
-#   Empty() Empty() Knight(1) Empty() Empty() Empty() Empty() Empty();
-#   Empty() Empty() Empty() Empty() Empty() Empty() Empty() Knight(1);
-#   Empty() Pawn(true, -1) Empty() Empty() Empty() Empty() Empty() Empty();
-#   Empty() Empty() Rook(-1) Empty() Empty() Bishop(-1) Empty() Empty();
-#   Pawn(1) Empty() Pawn(-1) Empty() Empty() Empty() King(1) Empty();
-#   Empty() Pawn(-1) Empty() Empty() Empty() Empty() Empty() Empty();
-# ]
-# for start in [(3, 3) (6, 6) (3, 6) (8, 4) (2, 1) (2, 8) (2, 5) (7, 7)]
-for start in [(1, 1)]
-  println(start)
-  x, y = start
-  test = zeros(Int, 8, 8)
-  for (col, row) in Task(()-> moves(board[y, x], board, x, y))
-    test[row, col] = 1
-  end
-  println(test)
-end
-# mevent = MEVENT()
-# try
-#
-# finally
-
-# end
