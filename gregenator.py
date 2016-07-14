@@ -9,53 +9,6 @@ import multiprocessing
 
 locale.setlocale(locale.LC_ALL, '')
 
-piece_vals = {
-    0:0,
-    1:1,
-    2:3,
-    3:3,
-    4:5,
-    5:9,
-    6:1000
-}
-
-def piece_val(piece):
-    return piece_vals[piece.piece_type]
-
-# def naive_eval_board(board, color):
-#     board_val = 0
-#     for square in chess.SQUARES:
-#         piece = board.piece_at(square)
-#         if piece is not None:
-#             # print piece, piece.color
-#             if piece.color == color:
-#                 board_val += piece_val(piece)
-#             else:
-#                 board_val -= piece_val(piece)
-#     return board_val
-
-# def naive_eval_board(board, color):
-#     board_val = 0
-#     if board.is_checkmate() and board.turn != color:
-#         if color:
-#             return 10000
-#         else:
-#             return -10000
-#     elif board.is_game_over():
-#         if color:
-#             return -100
-#         else:
-#             return 100
-
-#     for square in chess.SQUARES:
-#         piece = board.piece_at(square)
-#         if piece is not None:
-#             # print piece, piece.color
-#             if piece.color:
-#                 board_val += piece_val(piece)
-#             else:
-#                 board_val -= piece_val(piece)
-#     return board_val
 def countbits(n):
   n = (n & 0x5555555555555555) + ((n & 0xAAAAAAAAAAAAAAAA) >> 1)
   n = (n & 0x3333333333333333) + ((n & 0xCCCCCCCCCCCCCCCC) >> 2)
@@ -81,6 +34,7 @@ def eval_board(board, color):
         elif board.is_game_over():
             return -100
     return material
+
 # def draw_board(stdscr, board):
 #     stdscr.addstr(0, 0, board.__unicode__().encode("utf-8"))
 #     # stdscr.addstr(str(board))
@@ -89,7 +43,6 @@ def eval_board(board, color):
 
 def computer_player(side, look_ahead):
     objective_func = functools.partial(eval_board, color=side)
-    # objective_func = naive_eval_board
     def comp_turn(board):
         # if few enough pieces
         # checkmate objective function
@@ -101,32 +54,12 @@ def computer_player(side, look_ahead):
         board.push(random.choice([move for val, move in allmoves if val == bestmove_val]))
     return comp_turn
 
-def minmax(itr):
-    maximum = float('-inf')
-    minimum = float('inf')
-    for el in itr:
-        if el < minimum:
-            minimum = el
-        elif el > maximum:
-            maximum = el
-    return minimum, maximum
-
-def gen_boards(board, halfmoves_ahead, initial_halfmoves):
-    # print halfmoves_ahead, initial_halfmoves
-    if (len(board.move_stack) == initial_halfmoves + halfmoves_ahead):# or board.is_game_over():
-        yield board
-    else:
-        for move in board.pseudo_legal_moves:
-            board.push(move)
-            for b in gen_boards(board, halfmoves_ahead, initial_halfmoves):
-                #check for valdiity?
-                yield b
-            board.pop()
-# def alphabeta()
 def quiecent(board):
     return True
+
 def iscapture(move):
     return True
+
 def alphabeta(board, depth, alpha, beta, maximizingPlayer, board_eval):
     if (depth <= 0 and quiecent(board)) or board.is_game_over():
         return board_eval(board)
@@ -154,50 +87,21 @@ def alphabeta(board, depth, alpha, beta, maximizingPlayer, board_eval):
 def wakka(board, first_move, func, halfmoves_ahead):
     board.push(first_move)
     return alphabeta(board, halfmoves_ahead-1, float('-inf'), float('inf'), False, func), first_move
-    # alphabeta
-# def wahtt(board, first_move, func, halfmoves_ahead):
-#     initial_halfmoves = len(board.move_stack)
-#     board.push(first_move)
-#     # wakka = min(it.imap(func, gen_boards(board, halfmoves_ahead, initial_halfmoves)))
-#     minimum, maximum = minmax(it.imap(func, gen_boards(board, halfmoves_ahead, initial_halfmoves)))
-#     board.pop()
-#     return minimum, first_move
+    board.pop()
 
-def minmax_move(board, func, halfmoves_ahead): # TODO put max timeout in that bis
-    # assert halfmoves_ahead & 1 == 0, 'Need even halfmoves ahead'
-    # maxmoves = [pool.apply_async(wahtt, (board, move, func, halfmoves_ahead)) for move in board.legal_moves]
-    maxmoves = [pool.apply_async(wakka, (board, move, func, halfmoves_ahead)) for move in board.legal_moves]
-    maxmoves = [r.get() for r in maxmoves]
-    # maxmoves = [wahtt(board, move, func, halfmoves_ahead) for move in board.legal_moves]
-    # maxmove_val, _ = max(maxmoves)
-    # maxmove_val, _ = max(maxmoves)
-    # return random.choice([mm for mv, mm in maxmoves if mv == maxmove_val])
-    # return max(
+if __name__ == '__main__':
+    pool = multiprocessing.Pool(8)
 
-pool = multiprocessing.Pool(8)
+    board = chess.Board()
+    p1 = computer_player(True, 4)
+    p2 = computer_player(False, 2)
 
-board = chess.Board()
-p1 = computer_player(True, 4)
-p2 = computer_player(False, 2)
-# current_player = p1
-# for move in board.legal_moves:
-#     board.push(move)
-#     print board
-#     print naive_eval_board(board, False)
-#     print '-'*80
-#     board.pop()
+    while not board.is_game_over():
+        current_player = p1 if board.turn else p2
 
-while not board.is_game_over():
-    current_player = p1 if board.turn else p2
-
-    print board.turn
-    current_player(board)
+        current_player(board)
+        print board
+        assert board.is_valid()
+        print '-'*80
     print board
-    assert board.is_valid()
-    # print board.turn
-    print '-'*80
-    # print board.__unicode__().encode("utf-8")
-    # print boarda
-    # assert board.is_valid()
-print board
-print board.result()
+    print board.result()
