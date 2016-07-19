@@ -1,13 +1,11 @@
 import random
 import chess
 import curses
-import locale
+import locale; locale.setlocale(locale.LC_ALL, '')
 import functools
 import itertools as it
-from collections import defaultdict
 import multiprocessing
-
-locale.setlocale(locale.LC_ALL, '')
+import gregenator_vis
 
 def countbits(n):
   n = (n & 0x5555555555555555) + ((n & 0xAAAAAAAAAAAAAAAA) >> 1)
@@ -34,12 +32,6 @@ def eval_board(board, color):
         elif board.is_game_over():
             return -100
     return material
-
-# def draw_board(stdscr, board):
-#     stdscr.addstr(0, 0, board.__unicode__().encode("utf-8"))
-#     # stdscr.addstr(str(board))
-#     stdscr.refresh()
-#     c = stdscr.getch()
 
 def computer_player(side, look_ahead):
     objective_func = functools.partial(eval_board, color=side)
@@ -90,18 +82,5 @@ def wakka(board, first_move, func, halfmoves_ahead):
     board.pop()
 
 if __name__ == '__main__':
-    pool = multiprocessing.Pool(8)
-
     board = chess.Board()
-    p1 = computer_player(True, 4)
-    p2 = computer_player(False, 2)
-
-    while not board.is_game_over():
-        current_player = p1 if board.turn else p2
-
-        current_player(board)
-        print board
-        assert board.is_valid()
-        print '-'*80
-    print board
-    print board.result()
+    curses.wrapper(gregenator_vis.UI, board)
