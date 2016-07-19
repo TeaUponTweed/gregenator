@@ -46,18 +46,28 @@ def computer_player(side, look_ahead):
         board.push(random.choice([move for val, move in allmoves if val == bestmove_val]))
     return comp_turn
 
-def quiecent(board):
+def quiecent(board, board_eval):
+    # init_val = board_eval(board)
+    # for move in board.pseudo_legal_moves:
+    #     board.push(move)
+    #     val = board_eval(board)
+    #     board.pop()
+    #     if abs(val-init_val) > 3:
+    #         return False
     return True
 
-def iscapture(move):
-    return True
+def iscapture(board, move):
+    return board.is_capture(move)
 
-def alphabeta(board, depth, alpha, beta, maximizingPlayer, board_eval):
-    if (depth <= 0 and quiecent(board)) or board.is_game_over():
-        return board_eval(board)
+def alphabeta(board, depth, alpha, beta, maximizingPlayer, board_eval, forceQuiecent=False):
+    if depth == 0  or board.is_game_over():
+        if forceQuiecent or quiecent(board, board_eval):
+            return board_eval(board)
+        else:
+            return alphabeta(board, 1, alpha, beta, maximizingPlayer, board_eval, True)
     if maximizingPlayer:
         v = float('-inf')
-        for move in sorted(board.pseudo_legal_moves, key = lambda x: iscapture(x), reverse=True):
+        for move in sorted(board.pseudo_legal_moves, key = lambda x: iscapture(board, x), reverse=True):
             board.push(move)
             v = max(v, alphabeta(board, depth - 1, alpha, beta, False, board_eval))
             board.pop()
