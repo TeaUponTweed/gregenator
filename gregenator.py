@@ -35,15 +35,13 @@ def eval_board(board, color):
 
 def computer_player(side, look_ahead):
     objective_func = functools.partial(eval_board, color=side)
+    pool = multiprocessing.Pool(8)
     def comp_turn(board):
-        # if few enough pieces
-        # checkmate objective function
-        # increase plys by 2
-        # max_move = minmax_move(board, objective_func, look_ahead)
-        allmoves = [pool.apply_async(wakka, (board, move, objective_func, look_ahead)) for move in board.legal_moves]
+        allmoves = [pool.apply_async(branch_first, (board, move, objective_func, look_ahead)) for move in board.legal_moves]
         allmoves = [r.get() for r in allmoves]
         bestmove_val, _ = max(allmoves)
         board.push(random.choice([move for val, move in allmoves if val == bestmove_val]))
+        return False
     return comp_turn
 
 def quiecent(board, board_eval):
@@ -86,10 +84,11 @@ def alphabeta(board, depth, alpha, beta, maximizingPlayer, board_eval, forceQuie
                 break
         return v
 
-def wakka(board, first_move, func, halfmoves_ahead):
+def branch_first(board, first_move, func, halfmoves_ahead):
     board.push(first_move)
-    return alphabeta(board, halfmoves_ahead-1, float('-inf'), float('inf'), False, func), first_move
+    v = alphabeta(board, halfmoves_ahead-1, float('-inf'), float('inf'), False, func), first_move
     board.pop()
+    return v
 
 if __name__ == '__main__':
     board = chess.Board()
