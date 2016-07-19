@@ -120,6 +120,7 @@ def human_player(side, stdscr):
                     if event == ord('z'):
                         board.pop()
                         board.pop()
+                        draw_board(stdscr, board)
                         legal_moves = defaultdict(list)
                         for move in board.legal_moves:
                             legal_moves[move.from_square].append(move)
@@ -127,6 +128,7 @@ def human_player(side, stdscr):
     return turn
 
 def draw_board(stdscr, board):
+    stdscr.clear()
     dark_square=True
     for i in xrange(8):
         for j in xrange(8):
