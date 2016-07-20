@@ -61,13 +61,13 @@ def UI(stdscr, board):
 
 def get_results(result):
     if result == '1-0':
-        return '\n########\nBLACK WINS\n########'
+        return '\n########\nBLACK WINS\n########\n'
     elif result == '0-1':
-        return '\n########\nWHITE WINS\n########'
+        return '\n########\nWHITE WINS\n########\n'
     elif result == '*':
-        return '\n########\nINCOMPLETE GAME\n########'
+        return '\n########\nINCOMPLETE GAME\n########\n'
     else:
-        return '\n########\nDRAW\n########'
+        return '\n########\nDRAW\n########\n'
 
 def human_player(side, stdscr):
     def turn(board):
@@ -75,32 +75,25 @@ def human_player(side, stdscr):
         for move in board.legal_moves:
             legal_moves[move.from_square].append(move)
         while  True:
-                # logfile.write('From Square %s\n' % (move.from_square,))
-            # logfile.write('==========\n')
-
+            draw_board(stdscr, board)
+            stdscr.addstr(12, 0, 'qqq to quit, zzz to undo\n')
+            stdscr.addstr(10, 0, "You're Turn!\n")
             event = stdscr.getch()
             if event == curses.KEY_MOUSE:
                 _, mx, my, _, _ = curses.getmouse()
-                # logfile.write('%s %s\n' % (mx, my))
-                stdscr.clear()
-                draw_board(stdscr, board)
                 from_square = mx//2+my*8
                 for move in legal_moves[from_square]:
-                    # logfile.write('From Square %s\n' % (move.from_square,))
-                    # logfile.write('To Square %s\n' % (move.to_square,))
                     x = move.to_square%8 * 2
                     y = move.to_square//8
-                    # logfile.write('%s %s\n' % (x, y))
                     color_pair = 2
                     if not side:
                         color_pair += 10
                     stdscr.chgat(y, x, 1, curses.color_pair(color_pair))
                     stdscr.chgat(y, x+1, 1, curses.color_pair(color_pair))
-                curses.setsyx(10,1)
+                stdscr.move(11, 0)
                 stdscr.refresh()
 
                 event = stdscr.getch()
-                curses.setsyx(10,1)
                 if event == curses.KEY_MOUSE:
                     _, mx, my, _, _ = curses.getmouse()
                     to_square = mx//2 + my*8
@@ -136,7 +129,9 @@ def human_player(side, stdscr):
 def draw_board(stdscr, board):
     stdscr.clear()
     dark_square=True
+    # stdscr.addstr(('  ' + '%s '*8  + '\n') % tuple(map(chr, list(reversed(range(ord('a'), ord('h')+1))))))
     for i in xrange(8):
+        # stdscr.addstr('%s '%i)
         for j in xrange(8):
             boardnum = 8*i + j
             piece = board.piece_at(boardnum)
@@ -158,8 +153,6 @@ def draw_board(stdscr, board):
         stdscr.addstr('\n')
         dark_square = not dark_square
     stdscr.addstr('\n')
-    stdscr.addstr('qqq to quit, zzz to undo\n')
-    curses.setsyx(10,1)
     stdscr.refresh()
 
 
