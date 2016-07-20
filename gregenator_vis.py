@@ -7,7 +7,7 @@ def side_select(stdscr):
         stdscr.addstr("Enter side select string (eg. B(lack):H(uman) W(hite):C(omputer))\n")
         stdscr.refresh()
         colors = []
-        players = []
+        players = [None, None]
         side_select_string = stdscr.getstr()
         if side_select_string:
             for sss in side_select_string.split():
@@ -17,7 +17,11 @@ def side_select(stdscr):
                     stdscr.addstr('Need different colors!\n')
                     return side_select_string(stdscr)
                 colors.append(color)
-                players.append(computer_player(color, 5) if player_type.lower().startswith('c') else human_player(color, stdscr))
+                if color:
+                    index = 0
+                else:
+                    index = 1
+                players[index] = computer_player(color, 5) if player_type.lower().startswith('c') else human_player(color, stdscr)
         else:
             players = [computer_player(True, 5), human_player(False, stdscr)]
 
