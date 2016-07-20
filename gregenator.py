@@ -35,7 +35,7 @@ def eval_board(board, color):
 
 def computer_player(side, look_ahead):
     objective_func = functools.partial(eval_board, color=side)
-    pool = multiprocessing.Pool(8)
+    pool = multiprocessing.Pool(4)
     def comp_turn(board):
         allmoves = [pool.apply_async(branch_first, (board, move, objective_func, look_ahead)) for move in board.legal_moves]
         allmoves = [r.get() for r in allmoves]
