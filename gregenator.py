@@ -35,12 +35,21 @@ def eval_board(board, color):
 
 def computer_player(side, look_ahead):
     objective_func = functools.partial(eval_board, color=side)
-    pool = multiprocessing.Pool(4)
     def comp_turn(board):
-        allmoves = [pool.apply_async(branch_first, (board, move, objective_func, look_ahead)) for move in board.legal_moves]
-        allmoves = [r.get() for r in allmoves]
-        bestmove_val, _ = max(allmoves)
-        board.push(random.choice([move for val, move in allmoves if val == bestmove_val]))
+        alpha = float('-inf')
+        beta = float('inf')
+        for move in sorted(board.legal_moves, key = lambda x: iscapture(board, x), reverse=True):
+            board.push(move)
+            val = alphabeta(board, look_ahead-1, alpha, beta, False, objective_func)
+            board.pop()
+            if val > alpha:
+                alpha = val
+                bestmoves = [move]
+            elif val == alpha:
+                bestmoves.append(move)
+            why.write('%s\n' % alpha)
+            why.write('%s\n\n' % val)
+        board.push(random.choice(bestmoves))
         return False
     return comp_turn
 
@@ -57,15 +66,13 @@ def quiecent(board, board_eval):
 def iscapture(board, move):
     return board.is_capture(move)
 
-def alphabeta(board, depth, alpha, beta, maximizingPlayer, board_eval, forceQuiecent=False):
+def alphabeta(board, depth, alpha, beta, maximizingPlayer, board_eval):
     if depth == 0  or board.is_game_over():
-        if forceQuiecent or quiecent(board, board_eval):
-            return board_eval(board)
-        else:
-            return alphabeta(board, 1, alpha, beta, maximizingPlayer, board_eval, True)
+        return board_eval(board)
+
     if maximizingPlayer:
         v = float('-inf')
-        for move in sorted(board.pseudo_legal_moves, key = lambda x: iscapture(board, x), reverse=True):
+        for move in board.pseudo_legal_moves:
             board.push(move)
             v = max(v, alphabeta(board, depth - 1, alpha, beta, False, board_eval))
             board.pop()
@@ -75,7 +82,7 @@ def alphabeta(board, depth, alpha, beta, maximizingPlayer, board_eval, forceQuie
         return v
     else:
         v = float('inf')
-        for move in sorted(board.pseudo_legal_moves, key = lambda x: board.is_capture(x), reverse=True):
+        for move in board.pseudo_legal_moves:
             board.push(move)
             v = min(v, alphabeta(board, depth - 1, alpha, beta, True, board_eval))
             board.pop()
@@ -83,12 +90,6 @@ def alphabeta(board, depth, alpha, beta, maximizingPlayer, board_eval, forceQuie
             if beta <= alpha:
                 break
         return v
-
-def branch_first(board, first_move, func, halfmoves_ahead):
-    board.push(first_move)
-    v = alphabeta(board, halfmoves_ahead-1, float('-inf'), float('inf'), False, func), first_move
-    board.pop()
-    return v
 
 if __name__ == '__main__':
     board = chess.Board()
