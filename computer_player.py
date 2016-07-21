@@ -5,7 +5,7 @@ import locale; locale.setlocale(locale.LC_ALL, '')
 import functools
 import itertools as it
 import multiprocessing
-import gregenator_vis
+import sys
 
 def countbits(n):
   n = (n & 0x5555555555555555) + ((n & 0xAAAAAAAAAAAAAAAA) >> 1)
@@ -47,21 +47,9 @@ def computer_player(side, look_ahead):
                 bestmoves = [move]
             elif val == alpha:
                 bestmoves.append(move)
-            why.write('%s\n' % alpha)
-            why.write('%s\n\n' % val)
         board.push(random.choice(bestmoves))
         return False
     return comp_turn
-
-def quiecent(board, board_eval):
-    # init_val = board_eval(board)
-    # for move in board.pseudo_legal_moves:
-    #     board.push(move)
-    #     val = board_eval(board)
-    #     board.pop()
-    #     if abs(val-init_val) > 3:
-    #         return False
-    return True
 
 def iscapture(board, move):
     return board.is_capture(move)
@@ -90,7 +78,3 @@ def alphabeta(board, depth, alpha, beta, maximizingPlayer, board_eval):
             if beta <= alpha:
                 break
         return v
-
-if __name__ == '__main__':
-    board = chess.Board()
-    curses.wrapper(gregenator_vis.UI, board)

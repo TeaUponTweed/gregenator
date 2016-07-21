@@ -1,10 +1,11 @@
 import curses
 from collections import defaultdict
 import datetime
+import chess
+from computer_player import computer_player
 
 def side_select(stdscr):
     try:
-        from gregenator import computer_player
         stdscr.addstr("Enter side select string (eg. B(lack):H(uman) W(hite):C(omputer))\n")
         stdscr.refresh()
         colors = []
@@ -154,7 +155,3 @@ def draw_board(stdscr, board):
         dark_square = not dark_square
     stdscr.addstr('\n')
     stdscr.refresh()
-
-
-if __name__ == '__main__':
-    curses.wrapper(main)
