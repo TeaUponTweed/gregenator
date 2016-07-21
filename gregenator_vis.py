@@ -3,6 +3,7 @@ from collections import defaultdict
 import datetime
 import chess
 from computer_player import computer_player
+import os
 
 def side_select(stdscr):
     try:
@@ -47,7 +48,9 @@ def UI(stdscr, board):
     curses.init_pair(14, 232, 88)
     p1, p2 = side_select(stdscr)
     draw_board(stdscr, board)
-    with open(str(datetime.datetime.now()).replace(' ', '_').replace(':', '-') + '.log', 'w', 1) as moves_file:
+    if not os.path.exists('logs'):
+        os.makedirs('logs')
+    with open(os.path.join('logs', str(datetime.datetime.now()).replace(' ', '_').replace(':', '-') + '.log'), 'w', 1) as moves_file:
         while not board.is_game_over():
             current_player = p1 if board.turn else p2
             quit = current_player(board)
