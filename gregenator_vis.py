@@ -24,9 +24,9 @@ def side_select(stdscr):
                     index = 0
                 else:
                     index = 1
-                players[index] = computer_player(color, 5) if player_type.lower().startswith('c') else human_player(color, stdscr)
+                players[index] = computer_player(color, 6) if player_type.lower().startswith('c') else human_player(color, stdscr)
         else:
-            players = [computer_player(True, 5), human_player(False, stdscr)]
+            players = [computer_player(True, 6), human_player(False, stdscr)]
 
         if len(players) != 2:
             stdscr.addstr("Incomplete specification")
@@ -46,6 +46,8 @@ def UI(stdscr, board):
     curses.init_pair(13, 232, 130)
     curses.init_pair(4, 255, 88)
     curses.init_pair(14, 232, 88)
+    curses.init_pair(5, 255, 4)
+    curses.init_pair(15, 232, 4)
     p1, p2 = side_select(stdscr)
     draw_board(stdscr, board)
     if not os.path.exists('logs'):
@@ -78,10 +80,29 @@ def human_player(side, stdscr):
         legal_moves = defaultdict(list)
         for move in board.legal_moves:
             legal_moves[move.from_square].append(move)
+
         while  True:
             draw_board(stdscr, board)
             stdscr.addstr(12, 0, 'qqq to quit, zzz to undo\n')
             stdscr.addstr(10, 0, "You're Turn!\n")
+
+            # Highlight last players move
+            color_pair = 5
+            if not side:
+                color_pair += 10
+
+            lastmove = board.peek()
+            x = lastmove.to_square%8 * 2
+            y = lastmove.to_square//8
+            stdscr.chgat(y, x, 1, curses.color_pair(color_pair))
+            stdscr.chgat(y, x+1, 1, curses.color_pair(color_pair))
+
+            x = lastmove.from_square%8 * 2
+            y = lastmove.from_square//8
+            stdscr.chgat(y, x, 1, curses.color_pair(color_pair))
+            stdscr.chgat(y, x+1, 1, curses.color_pair(color_pair))
+            stdscr.move(11, 0)
+            # Get mouse events for player move
             event = stdscr.getch()
             if event == curses.KEY_MOUSE:
                 _, mx, my, _, _ = curses.getmouse()
@@ -108,14 +129,14 @@ def human_player(side, stdscr):
                             stdscr.clear()
                             draw_board(stdscr, board)
                             return False
-
+            # Quit input tree
             elif event == ord('q'):
                 event = stdscr.getch()
                 if event == ord('q'):
                     event = stdscr.getch()
                     if event == ord('q'):
                         return True
-
+            # Undo input tree
             elif event == ord('z'):
                 event = stdscr.getch()
                 if event == ord('z'):
@@ -133,15 +154,12 @@ def human_player(side, stdscr):
 def draw_board(stdscr, board):
     stdscr.clear()
     dark_square=True
-    # stdscr.addstr(('  ' + '%s '*8  + '\n') % tuple(map(chr, list(reversed(range(ord('a'), ord('h')+1))))))
     for i in xrange(8):
-        # stdscr.addstr('%s '%i)
         for j in xrange(8):
             boardnum = 8*i + j
             piece = board.piece_at(boardnum)
             if piece is not None:
                 c = str(piece)
-                # c = piece.unicode_symbol(piece.color).encode("utf-8")
             else:
                 c = ' '
             dark_square = not dark_square
