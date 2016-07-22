@@ -7,6 +7,7 @@ import itertools as it
 import multiprocessing
 import sys
 import gmpy2
+import time
 
 def eval_board(board, color, gameover_result=None):
     white_mask = board.occupied_co[chess.WHITE]
@@ -25,22 +26,42 @@ def eval_board(board, color, gameover_result=None):
             return -100
     return material
 
+def branch_first(board, depth, eval_func):
+    alpha = float('-inf')
+    for move in sorted(board.legal_moves, key = lambda x: iscapture(board, x), reverse=True):
+        board.push(move)
+        val = alphabeta(board, depth-1, alpha, float('inf'), False, eval_func)
+        board.pop()
+        if val > alpha:
+            alpha = val
+            bestmoves = [move]
+        elif val == alpha:
+            bestmoves.append(move)
+    return bestmoves
+
 def computer_player(side, look_ahead):
-    objective_func = functools.partial(eval_board, color=side)
+    eval_func = functools.partial(eval_board, color=side)
+    pool = multiprocessing.Pool(4)
     def comp_turn(board):
-        alpha = float('-inf')
-        beta = float('inf')
-        for move in sorted(board.legal_moves, key = lambda x: iscapture(board, x), reverse=True):
-            board.push(move)
-            val = alphabeta(board, look_ahead-1, alpha, beta, False, objective_func)
-            board.pop()
-            if val > alpha:
-                alpha = val
-                bestmoves = [move]
-            elif val == alpha:
-                bestmoves.append(move)
-        board.push(random.choice(bestmoves))
-        return False
+        starttime = time.time()
+        bestmoves = list(board.legal_moves)
+        results = [pool.apply_async(branch_first, (board, depth, eval_func)) for depth in [2, 4, 6, 8]]
+        for res in results:
+            try:
+                bestmoves = res.get(timeout=max(starttime+30-time.time(), .1))
+            except multiprocessing.TimeoutError:
+                pass
+        assert len(bestmoves) > 0
+        random.shuffle(bestmoves)
+        for criteria in [lambda x: board.is_castling(x),
+                         lambda x: (x.from_square in xrange(16)) or (x.from_square in xrange(48, 64)),
+                         lambda x: not (board.piece_at(x.from_square).piece_type == chess.KING),
+                         lambda x: True]:
+            filtered_bestmoves = filter(criteria, bestmoves)
+            if filtered_bestmoves:
+                board.push(filtered_bestmoves[0])
+                return False
+
     return comp_turn
 
 def iscapture(board, move):
