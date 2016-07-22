@@ -1,0 +1,15 @@
+1. You must provide me with a way to play chess against the AI.  It must be somewhat convenient, i.e.  its not something where I have to ssh into a remote computer, setup my own bash script, compile/debug the code, and play on a ascii only terminal.  Limit of what is acceptable:  sshing into remote computer.  performing a git checkout.  performing a make install.  Playing on some sort of gui.
+
+2.  On any given revision if I beat the computer 2 out of 3 consecutive games it is considered a "revisional victory" and you guys have to create a new revision.
+
+3.  When I am presented with a revision, I have 60 days to achieve a "revisional victory" or I lose.
+
+4.  When I achieve a "revisional victory,"  you  have 60 days to create and present me with a "significantly different" revision or you lose.
+
+5.  Either party may forfeit at any time.
+
+6.  All "revisional victories" and revisions must be reported in a timely fashion.
+
+7.  When creating the API and interface of the chess program, all sources are considered fair games.  When creating the actual "guts" of the chess AI, it must come from scratch.  All research materials are considered fair, but no copying of code from pre-existing chess engines.
+
+8. Computer player must complete moves within ~30 seconds
