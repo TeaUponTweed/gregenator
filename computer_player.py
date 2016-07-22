@@ -6,25 +6,17 @@ import functools
 import itertools as it
 import multiprocessing
 import sys
+import gmpy2
 
-def countbits(n):
-  n = (n & 0x5555555555555555) + ((n & 0xAAAAAAAAAAAAAAAA) >> 1)
-  n = (n & 0x3333333333333333) + ((n & 0xCCCCCCCCCCCCCCCC) >> 2)
-  n = (n & 0x0F0F0F0F0F0F0F0F) + ((n & 0xF0F0F0F0F0F0F0F0) >> 4)
-  n = (n & 0x00FF00FF00FF00FF) + ((n & 0xFF00FF00FF00FF00) >> 8)
-  n = (n & 0x0000FFFF0000FFFF) + ((n & 0xFFFF0000FFFF0000) >> 16)
-  n = (n & 0x00000000FFFFFFFF) + ((n & 0xFFFFFFFF00000000) >> 32)
-  return n
-
-def eval_board(board, color):
+def eval_board(board, color, gameover_result=None):
     white_mask = board.occupied_co[chess.WHITE]
     black_mask = board.occupied_co[chess.BLACK]
-    material = ((countbits((board.pawns   & white_mask)) - countbits((board.pawns   & black_mask)))*1 +
-                (countbits((board.knights & white_mask)) - countbits((board.knights & black_mask)))*3 +
-                (countbits((board.bishops & white_mask)) - countbits((board.bishops & black_mask)))*3 +
-                (countbits((board.rooks   & white_mask)) - countbits((board.rooks   & black_mask)))*5 +
-                (countbits((board.queens  & white_mask)) - countbits((board.queens  & black_mask)))*9 +
-                (countbits((board.kings   & white_mask)) - countbits((board.kings   & black_mask)))*1000)
+    material = ((gmpy2.popcount((board.pawns   & white_mask)) - gmpy2.popcount((board.pawns   & black_mask)))*1 +
+                (gmpy2.popcount((board.knights & white_mask)) - gmpy2.popcount((board.knights & black_mask)))*3 +
+                (gmpy2.popcount((board.bishops & white_mask)) - gmpy2.popcount((board.bishops & black_mask)))*3 +
+                (gmpy2.popcount((board.rooks   & white_mask)) - gmpy2.popcount((board.rooks   & black_mask)))*5 +
+                (gmpy2.popcount((board.queens  & white_mask)) - gmpy2.popcount((board.queens  & black_mask)))*9 +
+                (gmpy2.popcount((board.kings   & white_mask)) - gmpy2.popcount((board.kings   & black_mask)))*1000)
     material = material if color else -material
     if abs(material) > 9 or (countbits(white_mask) + countbits(black_mask)) < 6:
         if board.is_checkmate() and board.turn != color:
