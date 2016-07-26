@@ -154,8 +154,8 @@ def human_player(side, stdscr):
 def draw_board(stdscr, board):
     stdscr.clear()
     dark_square=True
-    for i in xrange(8):
-        for j in xrange(8):
+    for i in range(8):
+        for j in range(8):
             boardnum = 8*i + j
             piece = board.piece_at(boardnum)
             if piece is not None:

@@ -54,7 +54,7 @@ def computer_player(side, look_ahead):
         assert len(bestmoves) > 0
         random.shuffle(bestmoves)
         for criteria in [lambda x: board.is_castling(x),
-                         lambda x: (x.from_square in xrange(16)) or (x.from_square in xrange(48, 64)),
+                         lambda x: (x.from_square in range(16)) or (x.from_square in range(48, 64)),
                          lambda x: not (board.piece_at(x.from_square).piece_type == chess.KING),
                          lambda x: True]:
             filtered_bestmoves = filter(criteria, bestmoves)
