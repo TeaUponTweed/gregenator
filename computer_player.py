@@ -59,16 +59,16 @@ class ComputerPlayer(object):
     def __init__(self, side, look_ahead=[2,4,6,8]):
         self.side = side
         self.look_ahead = look_ahead
-        self.pool = multiprocessing.Pool(maxtasksperchild=1)
+        self.pool = multiprocessing.Pool()
 
     def __call__(self, board):
         eval_func = functools.partial(eval_board, color=self.side)
         bestmoves = list(board.legal_moves)
-        results = [self.pool.apply_async(branch_first, args=(copy.deepcopy(board), depth, eval_func)) for depth in self.look_ahead]
+        results = [self.pool.apply_async(branch_first, args=(board, depth, eval_func)) for depth in self.look_ahead]
         starttime = time.time()
         for res in results:
             try:
-                bestmoves = res.get(starttime+15-time.time())
+                bestmoves = res.get(starttime+30-time.time())
             except multiprocessing.TimeoutError:
                 continue
         self.pool.terminate()
