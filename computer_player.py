@@ -19,7 +19,7 @@ def eval_board(board, color, gameover_result=None):
                 (gmpy2.popcount((board.queens  & white_mask)) - gmpy2.popcount((board.queens  & black_mask)))*9 +
                 (gmpy2.popcount((board.kings   & white_mask)) - gmpy2.popcount((board.kings   & black_mask)))*1000)
     material = material if color else -material
-    if abs(material) > 9 or (countbits(white_mask) + countbits(black_mask)) < 6:
+    if abs(material) >= 9 or (gmpy2.popcount(white_mask) + gmpy2.popcount(black_mask)) < 9:
         if board.is_checkmate() and board.turn != color:
             return 10000
         elif board.is_game_over():
