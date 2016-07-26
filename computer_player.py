@@ -8,6 +8,7 @@ import multiprocessing
 import sys
 import gmpy2
 import time
+import copy
 
 def eval_board(board, color, gameover_result=None):
     white_mask = board.occupied_co[chess.WHITE]
@@ -26,11 +27,26 @@ def eval_board(board, color, gameover_result=None):
             return -100
     return material
 
+def negamaxalphabeta(board, depth, alpha, beta, board_eval):
+        if depth == 0:
+            return board_eval(board)
+
+        for move in board.pseudo_legal_moves:
+            board.push(move)
+            score = -negamaxalphabeta(board, depth-1, -beta, -alpha, board_eval)
+            board.pop()
+            if score >= beta:
+                return beta
+            if score > alpha:
+                alpha = score
+        return alpha
+
 def branch_first(board, depth, eval_func):
     alpha = float('-inf')
+    beta = float('inf')
     for move in sorted(board.legal_moves, key = lambda x: iscapture(board, x), reverse=True):
         board.push(move)
-        val = alphabeta(board, depth-1, alpha, float('inf'), False, eval_func)
+        val = -negamaxalphabeta(board, depth-1, -beta, -alpha, eval_func)
         board.pop()
         if val > alpha:
             alpha = val
@@ -39,18 +55,25 @@ def branch_first(board, depth, eval_func):
             bestmoves.append(move)
     return bestmoves
 
-def computer_player(side, look_ahead):
-    eval_func = functools.partial(eval_board, color=side)
-    pool = multiprocessing.Pool(4)
-    def comp_turn(board):
-        starttime = time.time()
+class ComputerPlayer(object):
+    def __init__(self, side, look_ahead=[2,4,6,8]):
+        self.side = side
+        self.look_ahead = look_ahead
+        self.pool = multiprocessing.Pool(maxtasksperchild=1)
+
+    def __call__(self, board):
+        eval_func = functools.partial(eval_board, color=self.side)
         bestmoves = list(board.legal_moves)
-        results = [pool.apply_async(branch_first, (board, depth, eval_func)) for depth in [2, 4, 6, 8]]
+        results = [self.pool.apply_async(branch_first, args=(copy.deepcopy(board), depth, eval_func)) for depth in self.look_ahead]
+        starttime = time.time()
         for res in results:
             try:
-                bestmoves = res.get(timeout=max(starttime+30-time.time(), .1))
+                bestmoves = res.get(starttime+15-time.time())
             except multiprocessing.TimeoutError:
-                pass
+                continue
+        self.pool.terminate()
+        self.pool.join()
+
         assert len(bestmoves) > 0
         random.shuffle(bestmoves)
         for criteria in [lambda x: board.is_castling(x),
@@ -58,24 +81,25 @@ def computer_player(side, look_ahead):
                          lambda x: not (board.piece_at(x.from_square).piece_type == chess.KING),
                          lambda x: True]:
             filtered_bestmoves = filter(criteria, bestmoves)
-            if filtered_bestmoves:
-                board.push(filtered_bestmoves[0])
+            try:
+                move = next(filtered_bestmoves)
+                board.push(move)
                 return False
-
-    return comp_turn
+            except StopIteration:
+                pass
 
 def iscapture(board, move):
     return board.is_capture(move)
 
 def alphabeta(board, depth, alpha, beta, maximizingPlayer, board_eval):
-    if depth == 0  or board.is_game_over():
-        return board_eval(board)
+    if depth == 0:
+        return eval_board(board, maximizingPlayer)
 
     if maximizingPlayer:
         v = float('-inf')
         for move in board.pseudo_legal_moves:
             board.push(move)
-            v = max(v, alphabeta(board, depth - 1, alpha, beta, False, board_eval))
+            v = max(v, alphabeta(board, depth - 1, alpha, beta, False, None))
             board.pop()
             alpha = max(alpha, v)
             if beta <= alpha:
@@ -85,7 +109,7 @@ def alphabeta(board, depth, alpha, beta, maximizingPlayer, board_eval):
         v = float('inf')
         for move in board.pseudo_legal_moves:
             board.push(move)
-            v = min(v, alphabeta(board, depth - 1, alpha, beta, True, board_eval))
+            v = min(v, alphabeta(board, depth - 1, alpha, beta, True, None))
             board.pop()
             beta = min(beta, v)
             if beta <= alpha:

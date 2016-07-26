@@ -2,7 +2,7 @@ import curses
 from collections import defaultdict
 import datetime
 import chess
-from computer_player import computer_player
+from computer_player import ComputerPlayer
 import os
 
 def side_select(stdscr):
@@ -24,9 +24,9 @@ def side_select(stdscr):
                     index = 0
                 else:
                     index = 1
-                players[index] = computer_player(color, 6) if player_type.lower().startswith('c') else human_player(color, stdscr)
+                players[index] = ComputerPlayer(color) if player_type.lower().startswith('c') else human_player(color, stdscr)
         else:
-            players = [computer_player(True, 6), human_player(False, stdscr)]
+            players = [ComputerPlayer(True), human_player(False, stdscr)]
 
         if len(players) != 2:
             stdscr.addstr("Incomplete specification")
