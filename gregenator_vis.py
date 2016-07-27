@@ -58,9 +58,9 @@ def UI(stdscr, board):
 
 def get_results(result):
     if result == '1-0':
-        return '\n########\nBLACK WINS\n########\n'
-    elif result == '0-1':
         return '\n########\nWHITE WINS\n########\n'
+    elif result == '0-1':
+        return '\n########\nBLACK WINS\n########\n'
     elif result == '*':
         return '\n########\nINCOMPLETE GAME\n########\n'
     else:
@@ -78,21 +78,23 @@ def human_player(side, stdscr):
             stdscr.addstr(10, 0, "You're Turn!\n")
 
             # Highlight last players move
-            color_pair = 5
-            if not side:
-                color_pair += 10
+            try:
+                color_pair = 5
+                if not side:
+                    color_pair += 10
+                lastmove = board.peek()
+                x = lastmove.to_square%8 * 2
+                y = lastmove.to_square//8
+                stdscr.chgat(y, x, 1, curses.color_pair(color_pair))
+                stdscr.chgat(y, x+1, 1, curses.color_pair(color_pair))
 
-            lastmove = board.peek()
-            x = lastmove.to_square%8 * 2
-            y = lastmove.to_square//8
-            stdscr.chgat(y, x, 1, curses.color_pair(color_pair))
-            stdscr.chgat(y, x+1, 1, curses.color_pair(color_pair))
-
-            x = lastmove.from_square%8 * 2
-            y = lastmove.from_square//8
-            stdscr.chgat(y, x, 1, curses.color_pair(color_pair))
-            stdscr.chgat(y, x+1, 1, curses.color_pair(color_pair))
-            stdscr.move(11, 0)
+                x = lastmove.from_square%8 * 2
+                y = lastmove.from_square//8
+                stdscr.chgat(y, x, 1, curses.color_pair(color_pair))
+                stdscr.chgat(y, x+1, 1, curses.color_pair(color_pair))
+                stdscr.move(11, 0)
+            except IndexError:
+                pass
             # Get mouse events for player move
             event = stdscr.getch()
             if event == curses.KEY_MOUSE:
