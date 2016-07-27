@@ -2,40 +2,31 @@ import curses
 from collections import defaultdict
 import datetime
 import chess
-from computer_player import ComputerPlayer
+from computer_player import computer_player
 import os
 
 def side_select(stdscr):
-    try:
-        stdscr.addstr("Enter side select string (eg. B(lack):H(uman) W(hite):C(omputer))\n")
-        stdscr.refresh()
-        colors = []
-        players = [None, None]
-        side_select_string = stdscr.getstr()
-        if side_select_string:
-            for sss in side_select_string.split():
-                color, player_type = sss.split(':')
-                color = color.lower().startswith('w')
-                if color in colors:
-                    stdscr.addstr('Need different colors!\n')
-                    return side_select_string(stdscr)
-                colors.append(color)
-                if color:
-                    index = 0
-                else:
-                    index = 1
-                players[index] = ComputerPlayer(color) if player_type.lower().startswith('c') else human_player(color, stdscr)
-        else:
-            players = [ComputerPlayer(True), human_player(False, stdscr)]
-
-        if len(players) != 2:
-            stdscr.addstr("Incomplete specification")
-            return side_select(stdscr)
-
-        return players
-    except:
-        stdscr.addstr("Bad format!\n")
+    players = []
+    stdscr.addstr("White is? (C[omputer]|H[uman])\n")
+    side_sel = stdscr.getstr().decode()
+    if side_sel.lower().startswith('h'):
+        players.append(human_player(True, stdscr))
+    elif side_sel.lower().startswith('c'):
+        players.append(computer_player(True))
+    else:
+        stdscr.addstr("Invalid\n")
         return side_select(stdscr)
+    stdscr.addstr("Black is? (C[omputer]|H[uman])\n")
+    side_sel = stdscr.getstr().decode()
+    if side_sel.lower().startswith('h'):
+        players.append(human_player(False, stdscr))
+    elif side_sel.lower().startswith('c'):
+        players.append(computer_player(False))
+    else:
+        stdscr.addstr("Invalid\n")
+        return side_select(stdscr)
+    return players
+
 
 def UI(stdscr, board):
     curses.echo()
