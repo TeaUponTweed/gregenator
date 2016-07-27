@@ -36,7 +36,6 @@ if __name__ == '__main__':
         for depth in [1, 2, 3]:
             board_eval = functools.partial(computer_player.eval_board, color=board.turn)
             assert (negamax(board, depth, board_eval) ==
-                    # computer_player.alphabeta(board, depth, float('-inf'), float('inf'), True, board_eval) == 
                     negamaxalphabeta(board, depth, float('-inf'), float('inf'), board_eval))
             
         board.push(random.choice(list(board.legal_moves)))
