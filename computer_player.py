@@ -21,10 +21,11 @@ def eval_board(board, gameover=False):
                 (gmpy2.popcount((board.kings   & white_mask)) - gmpy2.popcount((board.kings   & black_mask)))*1000)
 
     if gameover or abs(material) >= 9 or (gmpy2.popcount(white_mask) + gmpy2.popcount(black_mask)) < 9:
-        if board.is_checkmate() and board.turn:
-            return -10000
-        elif board.is_checkmate() and not board.turn:
-            return 10000
+        if board.is_checkmate():
+            if board.turn:
+                return -10000
+            else:
+                return 10000
 
     return material
 
@@ -33,36 +34,41 @@ class OuttaTime(Exception): pass
 
 
 def negamaxalphabeta(board, depth, alpha, beta, color, starttime=None, maxtime=30):
-        if starttime is not None:
-            if time.time() > starttime + maxtime:
-                raise OuttaTime('Ran out of time')
+    assert alpha < beta
+    if starttime is not None:
+        if time.time() > starttime + maxtime:
+            raise OuttaTime('Ran out of time')
 
-        if depth == 0:
-            return color * eval_board(board)
-        for move in board.pseudo_legal_moves:
-            board.push(move)
-            score = -negamaxalphabeta(board, depth-1, alpha, beta, -color, starttime)
-            board.pop()
-            if score >= beta:
-                return beta
-            if score > alpha:
-                alpha = score
-        return alpha
+    if depth == 0:
+        return color * eval_board(board)
+    best = float('-inf')
+    for move in board.pseudo_legal_moves:
+        board.push(move)
+        score = -negamaxalphabeta(board, depth-1, -beta, -alpha, -color, starttime, maxtime)
+        best = max(best, score)
+        alpha = max(alpha, score)
+        board.pop()
+        if alpha >= beta:
+            break
+    return best
 
 
 def branch_first(board, depth, color, starttime):
-    alpha = float('-inf')
-    beta = float('inf')
+    maxscore = float('-inf')
+    bestmoves = []
     for move in sorted(board.legal_moves, key = lambda x: iscapture(board, x), reverse=True):
         board.push(move)
-        val = -negamaxalphabeta(board, depth-1, -beta, -alpha, -color, starttime)
+        val = -negamaxalphabeta(board, depth-1, float('-inf'), float('inf'), -color, starttime)
+        logfile.write('val {}, color {} move {}\n'.format(val, color, move))
         board.pop()
-        if val > alpha:
-            alpha = val
+        if val > maxscore:
+            maxscore = val
             bestmoves = [move]
-        elif val == alpha:
+        elif val == maxscore:
             bestmoves.append(move)
-    return bestmoves
+    logfile.write('color {}, best moves {} max {} \n'.format(color, bestmoves, maxscore))
+    logfile.write('********\n')
+    return maxscore, bestmoves
 
 
 def computer_player(maximizing_player, look_ahead=[2, 4, 5, 6, 8]):
@@ -76,7 +82,7 @@ def computer_player(maximizing_player, look_ahead=[2, 4, 5, 6, 8]):
         starttime = time.time()
         for depth in look_ahead:
             try:
-                bestmoves = branch_first(copy.deepcopy(board), depth, color, starttime)
+                _, bestmoves = branch_first(copy.deepcopy(board), depth, color, starttime)
                 logfile.write('Got to depth %s in %ss\n' % (depth, time.time()-starttime))
             except OuttaTime:
                 logfile.write('Couldn\'t do depth %s\n' % depth)
